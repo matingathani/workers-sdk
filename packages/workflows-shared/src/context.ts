@@ -45,6 +45,7 @@ export type StepState = {
 export type WorkflowStepContext = {
 	attempt: number;
 };
+const PAUSE_DATETIME = "PAUSE_DATETIME";
 
 export class Context extends RpcTarget {
 	#engine: Engine;
@@ -57,6 +58,23 @@ export class Context extends RpcTarget {
 		super();
 		this.#engine = engine;
 		this.#state = state;
+	}
+
+	async #checkForPendingPause(): Promise<void> {
+		const status = await this.#engine.getStatus();
+		if (status === InstanceStatus.WaitingForPause) {
+			await this.#state.storage.put(PAUSE_DATETIME, new Date());
+			const metadata =
+				await this.#state.storage.get<InstanceMetadata>(INSTANCE_METADATA);
+			if (metadata) {
+				await this.#engine.setStatus(
+					metadata.accountId,
+					metadata.instance.id,
+					InstanceStatus.Paused
+				);
+			}
+			await this.#engine.abort("User called pause");
+		}
 	}
 
 	#getCount(name: string): number {
@@ -507,7 +525,12 @@ export class Context extends RpcTarget {
 			return result;
 		};
 
-		return doWrapper(closure);
+		const result = await doWrapper(closure);
+
+		// Check if a pause was requested while this step was running
+		await this.#checkForPendingPause();
+
+		return result;
 	}
 
 	async sleep(name: string, duration: WorkflowSleepDuration): Promise<void> {
@@ -596,6 +619,9 @@ export class Context extends RpcTarget {
 
 		// @ts-expect-error priorityQueue is initiated in init
 		this.#engine.priorityQueue.remove({ hash: cacheKey, type: "sleep" });
+
+		// Check if a pause was requested while this sleep was running
+		await this.#checkForPendingPause();
 	}
 
 	async sleepUntil(name: string, timestamp: Date | number): Promise<void> {
@@ -781,6 +807,9 @@ export class Context extends RpcTarget {
 				await this.#state.storage.put(errorKey, error);
 				throw error;
 			});
+
+		// Check if a pause was requested while we were waiting for the event
+		await this.#checkForPendingPause();
 
 		return result as WorkflowStepEvent<T>;
 	}

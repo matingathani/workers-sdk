@@ -70,22 +70,31 @@ class InstanceImpl implements WorkflowInstance {
 	) {}
 
 	public async pause(): Promise<void> {
-		// Look for instance in namespace
-		// Get engine stub
-		// Call a few functions on stub
-		throw new Error("Not implemented yet");
+		const instance = (await this.binding.get(this.id)) as WorkflowInstance &
+			Disposable;
+		await instance.pause();
+		instance[Symbol.dispose]();
 	}
 
 	public async resume(): Promise<void> {
-		throw new Error("Not implemented yet");
+		const instance = (await this.binding.get(this.id)) as WorkflowInstance &
+			Disposable;
+		await instance.resume();
+		instance[Symbol.dispose]();
 	}
 
 	public async terminate(): Promise<void> {
-		throw new Error("Not implemented yet");
+		const instance = (await this.binding.get(this.id)) as WorkflowInstance &
+			Disposable;
+		await instance.terminate();
+		instance[Symbol.dispose]();
 	}
 
 	public async restart(): Promise<void> {
-		throw new Error("Not implemented yet");
+		const instance = (await this.binding.get(this.id)) as WorkflowInstance &
+			Disposable;
+		await instance.restart();
+		instance[Symbol.dispose]();
 	}
 
 	public async status(): Promise<InstanceStatus> {

@@ -1,6 +1,15 @@
 import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
-import { InstanceEvent, instanceStatusName } from "./instance";
-import { WorkflowError } from "./lib/errors";
+import {
+	InstanceStatus as EngineInstanceStatus,
+	InstanceEvent,
+	instanceStatusName,
+} from "./instance";
+import {
+	isAbortError,
+	isUserTriggeredRestart,
+	isUserTriggeredTerminate,
+	WorkflowError,
+} from "./lib/errors";
 import { isValidWorkflowInstanceId } from "./lib/validators";
 import type {
 	DatabaseInstance,
@@ -50,6 +59,12 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 				if (val !== undefined) {
 					val[Symbol.dispose]();
 				}
+			})
+			.catch((e) => {
+				// Suppress abort errors since they're expected
+				if (!isAbortError(e)) {
+					throw e;
+				}
 			});
 
 		this.ctx.waitUntil(initPromise);
@@ -62,7 +77,11 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 	public async get(id: string): Promise<WorkflowInstance> {
 		const stubId = this.env.ENGINE.idFromName(id);
 		const stub = this.env.ENGINE.get(stubId);
-		const handle = new WorkflowHandle(id, stub);
+
+		// Pass a getter function so WorkflowHandle can get a fresh stub after abort
+		const getStub = () => this.env.ENGINE.get(this.env.ENGINE.idFromName(id));
+
+		const handle = new WorkflowHandle(id, stub, getStub);
 
 		try {
 			await handle.status();
@@ -147,36 +166,90 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 }
 
 export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
+	private stub: DurableObjectStub<Engine>;
+
 	constructor(
 		public id: string,
-		private stub: DurableObjectStub<Engine>
+		stub: DurableObjectStub<Engine>,
+		private getStub: () => DurableObjectStub<Engine>
 	) {
 		super();
+		this.stub = stub;
 	}
 
 	public async pause(): Promise<void> {
-		// Look for instance in namespace
-		// Get engine stub
-		// Call a few functions on stub
-		throw new Error("Not implemented yet");
+		// Sets status to WaitingForPause. The engine keeps running —
+		// the Context class will check for this between steps, finish
+		// the current step, then transition to Paused and abort.
+		await this.stub.changeInstanceStatus("pause");
 	}
 
 	public async resume(): Promise<void> {
-		throw new Error("Not implemented yet");
+		// Two cases:
+		// 1. Engine is still running, status is WaitingForPause → cancel the
+		//    pending pause by setting status back to Running via changeInstanceStatus.
+		// 2. Engine was aborted, status is Paused → get a fresh stub and call
+		//    attemptResume() to offset timers and re-init.
+		//
+		// We try the "cancel" path first. If that fails (e.g. the DO was
+		// already aborted), we fall through to the "fully paused" path.
+		try {
+			await this.stub.changeInstanceStatus("resume");
+
+			// Check if the engine actually cancelled the pause
+			// (i.e. went from WaitingForPause → Running).
+			// If it's still Paused, we need the full resume path.
+			const statusResult = await this.stub.getStatus();
+			if (statusResult !== EngineInstanceStatus.Paused) {
+				return; // Successfully cancelled the pending pause
+			}
+		} catch {
+			// Stub is stale (engine was aborted) — fall through to full resume
+		}
+
+		// Full resume: get a fresh stub and call attemptResume
+		this.stub = this.getStub();
+		await this.stub.attemptResume();
 	}
 
 	public async terminate(): Promise<void> {
-		throw new Error("Not implemented yet");
+		try {
+			await this.stub.changeInstanceStatus("terminate");
+		} catch (e) {
+			// terminate causes instance abortion
+			if (!isUserTriggeredTerminate(e)) {
+				throw e;
+			}
+		}
 	}
 
 	public async restart(): Promise<void> {
-		throw new Error("Not implemented yet");
+		try {
+			await this.stub.changeInstanceStatus("restart");
+		} catch (e) {
+			// restart causes instance abortion
+			if (!isUserTriggeredRestart(e)) {
+				throw e;
+			}
+		}
+
+		// trigger restart flow after abortion
+		this.stub = this.getStub();
+		await this.stub.attemptRestart();
 	}
 
 	public async status(): Promise<
 		InstanceStatus & { __LOCAL_DEV_STEP_OUTPUTS: unknown[] }
 	> {
-		const status = await this.stub.getStatus();
+		// If the stub is stale (e.g. after pause/restart/terminate aborted
+		// the DO), refresh it transparently so callers never see the error.
+		let status: EngineInstanceStatus;
+		try {
+			status = await this.stub.getStatus();
+		} catch {
+			this.stub = this.getStub();
+			status = await this.stub.getStatus();
+		}
 
 		// NOTE(lduarte): for some reason, sync functions over RPC are typed as never instead of Promise<EngineLogs>
 		using logs = await (this.stub.readLogs() as unknown as Promise<
