@@ -1,5 +1,59 @@
 # wrangler
 
+## 4.72.0
+
+### Minor Changes
+
+- [#12746](https://github.com/cloudflare/workers-sdk/pull/12746) [`211d75d`](https://github.com/cloudflare/workers-sdk/commit/211d75d6f5e611f86ff9b62d4e280b8baaa842b7) Thanks [@NuroDev](https://github.com/NuroDev)! - Add support for inheritable bindings in type generation
+
+  When using `wrangler types` with multiple environments, bindings from inheritable config properties (like `assets`) are now correctly inherited from the top-level config in all named environments. Previously, if you defined `assets.binding` at the top level with named environments, the binding would be marked as optional in the generated `Env` type because the type generation didn't account for inheritance.
+
+  Example:
+
+  ```json
+  {
+  	"assets": {
+  		"binding": "ASSETS",
+  		"directory": "./public"
+  	},
+  	"env": {
+  		"staging": {},
+  		"production": {}
+  	}
+  }
+  ```
+
+  Before this change, `ASSETS` would be typed as `ASSETS?: Fetcher` (optional). Now, `ASSETS` is correctly typed as `ASSETS: Fetcher` (required). This fix currently applies to the `assets` binding, with an extensible mechanism to support additional inheritable bindings in the future.
+
+### Patch Changes
+
+- [#12790](https://github.com/cloudflare/workers-sdk/pull/12790) [`5451a7f`](https://github.com/cloudflare/workers-sdk/commit/5451a7fbf9e08cdc7731aaed43de1e0e241c944f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Bump node-forge to ^1.3.2 to address security vulnerabilities
+
+  node-forge had ASN.1 unbounded recursion, OID integer truncation, and ASN.1 validator desynchronization vulnerabilities. This is a bundled dependency used for local HTTPS certificate handling.
+
+- [#12795](https://github.com/cloudflare/workers-sdk/pull/12795) [`82cc2a8`](https://github.com/cloudflare/workers-sdk/commit/82cc2a8beba2b4a2c5765222858f7eb53c730a98) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260301.1 | 1.20260306.1 |
+
+- [#12811](https://github.com/cloudflare/workers-sdk/pull/12811) [`3c67c2a`](https://github.com/cloudflare/workers-sdk/commit/3c67c2a9de3681f59026fecdcf58ca5b816882c8) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260306.1 | 1.20260307.1 |
+
+- [#12808](https://github.com/cloudflare/workers-sdk/pull/12808) [`6ed249b`](https://github.com/cloudflare/workers-sdk/commit/6ed249b77aa8d335dc7b20790892fe4dced9af4e) Thanks [@MaxwellCalkin](https://github.com/MaxwellCalkin)! - Fix `wrangler d1 execute --json` returning `"null"` (string) instead of `null` (JSON null) for SQL NULL values
+
+  When using `wrangler d1 execute --json` with local execution, SQL NULL values were incorrectly serialized as the string `"null"` instead of JSON `null`. This produced invalid JSON output that violated RFC 4627. The fix removes the explicit null-to-string conversion so NULL values are preserved as proper JSON null in the output.
+
+- Updated dependencies [[`5451a7f`](https://github.com/cloudflare/workers-sdk/commit/5451a7fbf9e08cdc7731aaed43de1e0e241c944f), [`82cc2a8`](https://github.com/cloudflare/workers-sdk/commit/82cc2a8beba2b4a2c5765222858f7eb53c730a98), [`3c67c2a`](https://github.com/cloudflare/workers-sdk/commit/3c67c2a9de3681f59026fecdcf58ca5b816882c8), [`a7c87d1`](https://github.com/cloudflare/workers-sdk/commit/a7c87d14a46850e38ae5a9a3ccde4b983e37a8cc), [`e4d9510`](https://github.com/cloudflare/workers-sdk/commit/e4d9510c3439d313ba0e0f78bf00d0726d5f67e9)]:
+  - miniflare@4.20260307.0
+
 ## 4.71.0
 
 ### Minor Changes

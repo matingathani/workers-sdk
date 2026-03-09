@@ -1,5 +1,39 @@
 # miniflare
 
+## 4.20260307.0
+
+### Minor Changes
+
+- [#12754](https://github.com/cloudflare/workers-sdk/pull/12754) [`e4d9510`](https://github.com/cloudflare/workers-sdk/commit/e4d9510c3439d313ba0e0f78bf00d0726d5f67e9) Thanks [@emily-shen](https://github.com/emily-shen)! - Add cross-process support to the local explorer
+
+  When running multiple miniflare processes, the local explorer will now be able to view and edit resources that are bound to workers in other miniflare instances.
+
+### Patch Changes
+
+- [#12790](https://github.com/cloudflare/workers-sdk/pull/12790) [`5451a7f`](https://github.com/cloudflare/workers-sdk/commit/5451a7fbf9e08cdc7731aaed43de1e0e241c944f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Bump hono to ^4.12.5 and devalue to ^5.6.3 to address security vulnerabilities
+
+  Hono had multiple advisories including arbitrary file access via serveStatic, JWT algorithm confusion, and XSS through ErrorBoundary. Devalue had denial of service vulnerabilities in devalue.parse. These are bundled dependencies so the fix is delivered via this patch.
+
+- [#12795](https://github.com/cloudflare/workers-sdk/pull/12795) [`82cc2a8`](https://github.com/cloudflare/workers-sdk/commit/82cc2a8beba2b4a2c5765222858f7eb53c730a98) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260301.1 | 1.20260306.1 |
+
+- [#12811](https://github.com/cloudflare/workers-sdk/pull/12811) [`3c67c2a`](https://github.com/cloudflare/workers-sdk/commit/3c67c2a9de3681f59026fecdcf58ca5b816882c8) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260306.1 | 1.20260307.1 |
+
+- [#12786](https://github.com/cloudflare/workers-sdk/pull/12786) [`a7c87d1`](https://github.com/cloudflare/workers-sdk/commit/a7c87d14a46850e38ae5a9a3ccde4b983e37a8cc) Thanks [@emily-shen](https://github.com/emily-shen)! - local explorer: validate origin and host headers
+
+  The local explorer is a WIP experimental feature.
+
 ## 4.20260301.1
 
 ### Minor Changes
