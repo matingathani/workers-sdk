@@ -249,13 +249,14 @@ describe("execute", () => {
 		expect(parsed[0].results[0].name).toBeNull();
 	});
 
-
 	it("should strip BEGIN TRANSACTION / COMMIT from a SQL file when executing locally", async ({
 		expect,
 	}) => {
 		setIsTTY(false);
 		writeWranglerConfig({
-			d1_databases: [{ binding: "DATABASE", database_name: "db", database_id: "xxxx" }],
+			d1_databases: [
+				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+			],
 		});
 
 		// SQL file that mimics a SQLite .dump output: wraps statements in a transaction
@@ -277,7 +278,9 @@ describe("execute", () => {
 	}) => {
 		setIsTTY(false);
 		writeWranglerConfig({
-			d1_databases: [{ binding: "DATABASE", database_name: "db", database_id: "xxxx" }],
+			d1_databases: [
+				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+			],
 		});
 
 		const sqlWithMultipleTransactions = [

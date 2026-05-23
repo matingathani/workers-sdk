@@ -525,9 +525,7 @@ async function executeRemotely({
  * the original file can be used as-is. The caller is responsible for deleting
  * the temp file when it is no longer needed.
  */
-async function stripTransactionFromFile(
-	file: string
-): Promise<string | null> {
+async function stripTransactionFromFile(file: string): Promise<string | null> {
 	const sql = await fs.readFile(file, "utf-8");
 	if (!mayContainTransaction(sql)) {
 		return null;
